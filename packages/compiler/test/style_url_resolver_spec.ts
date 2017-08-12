@@ -51,6 +51,13 @@ export function main() {
       expect(styleWithImports.styleUrls).not.toContain('http://ng.io/3.css');
     });
 
+    it('should keep /*# ... */ comments', () => {
+      const css = `/*normal comment*/\n/*# sourceURL=.... */\n/*# sourceMappingURL=... */`;
+      const styleWithImports = extractStyleUrls(urlResolver, 'http://ng.io', css);
+      expect(styleWithImports.style.trim())
+          .toEqual('/*# sourceURL=.... */\n/*# sourceMappingURL=... */');
+    });
+
     it('should extract "@import url()" urls', () => {
       const css = `
       @import url('3.css');

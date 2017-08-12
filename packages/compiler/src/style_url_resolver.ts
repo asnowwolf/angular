@@ -29,19 +29,31 @@ export function extractStyleUrls(
     resolver: UrlResolver, baseUrl: string, cssText: string): StyleWithImports {
   const foundUrls: string[] = [];
 
-  const modifiedCssText =
-      cssText.replace(CSS_COMMENT_REGEXP, '').replace(CSS_IMPORT_REGEXP, (...m: string[]) => {
-        const url = m[1] || m[2];
-        if (!isStyleUrlResolvable(url)) {
-          // Do not attempt to resolve non-package absolute URLs with URI scheme
-          return m[0];
-        }
-        foundUrls.push(resolver.resolve(baseUrl, url));
-        return '';
-      });
+  const modifiedCssText = cssText
+                              .replace(
+                                  CSS_COMMENT_REGEXP,
+                                  (...m: string[]) => {
+                                    if (m[1].startsWith(CSS_SOURCE_URL_PREFIX) ||
+                                        m[1].startsWith(CSS_SOURCE_MAPPING_URL_PREFIX)) {
+                                      return m[0];
+                                    }
+                                    return '';
+                                  })
+                              .replace(CSS_IMPORT_REGEXP, (...m: string[]) => {
+                                const url = m[1] || m[2];
+                                if (!isStyleUrlResolvable(url)) {
+                                  // Do not attempt to resolve non-package absolute URLs with URI
+                                  // scheme
+                                  return m[0];
+                                }
+                                foundUrls.push(resolver.resolve(baseUrl, url));
+                                return '';
+                              });
   return new StyleWithImports(modifiedCssText, foundUrls);
 }
 
 const CSS_IMPORT_REGEXP = /@import\s+(?:url\()?\s*(?:(?:['"]([^'"]*))|([^;\)\s]*))[^;]*;?/g;
-const CSS_COMMENT_REGEXP = /\/\*[\s\S]+?\*\//g;
+const CSS_COMMENT_REGEXP = /\/\*([\s\S]+?)\*\//g;
+const CSS_SOURCE_URL_PREFIX = '# sourceURL=';
+const CSS_SOURCE_MAPPING_URL_PREFIX = '# sourceMappingURL=';
 const URL_WITH_SCHEMA_REGEXP = /^([^:/?#]+):/;
